@@ -20,23 +20,54 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.restdocs.JUnitRestDocumentation;
+import org.springframework.restdocs.snippet.Attributes;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.*;
+import static org.springframework.restdocs.payload.PayloadDocumentation.*;
+import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.*;
+import static org.springframework.restdocs.request.RequestDocumentation.*;
+import static org.springframework.restdocs.constraints.ConstraintDescriptions.*;
+
 
 @RunWith(SpringRunner.class)
+//@RunWith(SpringJUnit4ClassRunner.class)  // both runner class works
 @SpringBootTest
-@AutoConfigureMockMvc
+// @AutoConfigureMockMvc
 public class GreetingControllerTests {
 
-    @Autowired
+    @Rule
+    public JUnitRestDocumentation restDocumentation = new JUnitRestDocumentation();
+
+    // @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private WebApplicationContext context;
+
+    @Before
+    public void setUp() {
+        this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
+                .apply(documentationConfiguration(this.restDocumentation))
+                .build();
+    }
+
     @Test
+    @Ignore
     public void noParamGreetingShouldReturnDefaultMessage() throws Exception {
 
         this.mockMvc.perform(get("/greeting")).andDo(print()).andExpect(status().isOk())
@@ -44,11 +75,28 @@ public class GreetingControllerTests {
     }
 
     @Test
+    @Ignore
     public void paramGreetingShouldReturnTailoredMessage() throws Exception {
 
         this.mockMvc.perform(get("/greeting").param("name", "Spring Community"))
                 .andDo(print()).andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value("Hello, Spring Community!"));
+    }
+
+    @Test
+    public void greetingTest() throws Exception {
+        this.mockMvc.perform(get("/greeting").accept(MediaType.APPLICATION_JSON).param("name", "Spring Comunity"))
+            .andExpect(status().isOk())
+            .andDo(document("greeting",
+                    responseFields(
+                        fieldWithPath("id").description("primary key"),
+                        fieldWithPath("content").description("contents desc")
+                    ),
+                    requestParameters(
+                        parameterWithName("name").description("your name")
+                    )
+                )
+            );
     }
 
 }
